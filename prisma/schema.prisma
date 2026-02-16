@@ -1,0 +1,1169 @@
+// Blackstone CRM - Construction CRM & Project Management Platform
+// Full database schema for multi-tenant SaaS
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// MULTI-TENANT ACCOUNT SYSTEM
+// ============================================================================
+
+model Account {
+  id        String   @id @default(cuid())
+  name      String
+  logoUrl   String?
+  website   String?
+  country   String   @default("United States")
+  timezone  String   @default("America/Chicago")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  users            User[]
+  divisions        Division[]
+  companies        Company[]
+  contacts         Contact[]
+  leads            Lead[]
+  projects         Project[]
+  tasks            Task[]
+  activities       Activity[]
+  goNoGoQuestions  GoNoGoQuestion[]
+  customFields     CustomFieldGroup[]
+  customActivities CustomActivityType[]
+  industries       Industry[]
+  stages           Stage[]
+  lossReasons      LossReason[]
+  contractTypes    ContractType[]
+  tenderTypes      TenderType[]
+  marketSectors    MarketSector[]
+  deliveryMethods  DeliveryMethod[]
+  workScopes       WorkScope[]
+  costCodes        CostCode[]
+  costTypes        CostType[]
+  workforceRoles   WorkforceRole[]
+  reports          Report[]
+  savedViews       SavedView[]
+  costModels       CostModel[]
+  employees        Employee[]
+  aiChats          AiChat[]
+}
+
+// ============================================================================
+// USERS & AUTH
+// ============================================================================
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String?
+  firstName      String
+  lastName       String
+  photoUrl       String?
+  role           UserRole  @default(LIMITED)
+  lastLogin      DateTime?
+  emailVerified  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  // Relations
+  assignedCompanies  Company[]   @relation("AssignedToCompany")
+  assignedContacts   Contact[]   @relation("AssignedToContact")
+  assignedLeads      Lead[]      @relation("AssignedToLead")
+  assignedProjects   Project[]   @relation("AssignedToProject")
+  createdTasks       Task[]      @relation("TaskCreator")
+  assignedTasks      Task[]      @relation("TaskAssignee")
+  activities         Activity[]
+  comments           Comment[]
+  savedViews         SavedView[] @relation("ViewOwner")
+  reports            Report[]    @relation("ReportCreator")
+  aiChats            AiChat[]
+
+  @@index([accountId])
+  @@index([email])
+}
+
+enum UserRole {
+  ADMIN
+  LIMITED
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================================================
+// DIVISIONS & CONFIGURATION
+// ============================================================================
+
+model Division {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects  Project[]
+  leads     Lead[]
+  employees Employee[]
+
+  @@unique([accountId, name])
+}
+
+model Industry {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  companies CompanyIndustry[]
+
+  @@unique([accountId, name])
+}
+
+model Stage {
+  id         String      @id @default(cuid())
+  name       String
+  statusType StageStatus @default(OPEN)
+  sortOrder  Int         @default(0)
+  color      String      @default("#10B981")
+  createdAt  DateTime    @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects Project[]
+
+  @@unique([accountId, name])
+}
+
+enum StageStatus {
+  OPEN
+  WON
+  LOST
+}
+
+model LossReason {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects Project[]
+
+  @@unique([accountId, name])
+}
+
+model ContractType {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects Project[]
+  leads    Lead[]
+
+  @@unique([accountId, name])
+}
+
+model TenderType {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects Project[]
+  leads    Lead[]
+
+  @@unique([accountId, name])
+}
+
+model MarketSector {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects Project[]
+  leads    Lead[]
+
+  @@unique([accountId, name])
+}
+
+model DeliveryMethod {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects Project[]
+  leads    Lead[]
+
+  @@unique([accountId, name])
+}
+
+model WorkScope {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects ProjectWorkScope[]
+  leads    LeadWorkScope[]
+
+  @@unique([accountId, name])
+}
+
+// ============================================================================
+// CRM - COMPANIES
+// ============================================================================
+
+model Company {
+  id          String          @id @default(cuid())
+  name        String
+  phone       String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  website     String?
+  category    CompanyCategory @default(OTHER)
+  description String?
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedToCompany", fields: [assignedToId], references: [id])
+
+  // Relations
+  contacts           Contact[]
+  leads              Lead[]
+  projectCompanies   ProjectCompany[]
+  industries         CompanyIndustry[]
+  companyRoles       CompanyRole[]
+  activities         Activity[]
+  tasks              Task[]
+
+  @@index([accountId])
+  @@index([category])
+}
+
+enum CompanyCategory {
+  CLIENT
+  DESIGN
+  ENGINEERING
+  FINANCE
+  TRADE_PARTNER
+  OTHER
+}
+
+model CompanyIndustry {
+  companyId  String
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  industryId String
+  industry   Industry @relation(fields: [industryId], references: [id], onDelete: Cascade)
+
+  @@id([companyId, industryId])
+}
+
+model CompanyRole {
+  id        String   @id @default(cuid())
+  name      String
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+// ============================================================================
+// CRM - CONTACTS
+// ============================================================================
+
+model Contact {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String?
+  mobilePhone String?
+  officePhone String?
+  linkedIn    String?
+  title       String?
+  photoUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedToContact", fields: [assignedToId], references: [id])
+
+  contactRole String?
+
+  // Relations
+  leadContacts     LeadContact[]
+  projectContacts  ProjectContact[]
+  activities       Activity[]
+  tasks            Task[]
+
+  @@index([accountId])
+  @@index([companyId])
+}
+
+// ============================================================================
+// CRM - LEADS
+// ============================================================================
+
+model Lead {
+  id              String     @id @default(cuid())
+  name            String
+  value           Decimal?   @db.Decimal(15, 2)
+  status          LeadStatus @default(OPEN)
+  estimatedStart  DateTime?
+  lastActivity    DateTime?
+  source          String?
+  address         String?
+  city            String?
+  state           String?
+  zipCode         String?
+  latitude        Float?
+  longitude       Float?
+  gsf             Int?
+  units           Int?
+  constructionDuration Int?
+  isPriority      Boolean    @default(false)
+  isSnoozed       Boolean    @default(false)
+  snoozedUntil    DateTime?
+  isArchived      Boolean    @default(false)
+  gngScore        Float?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedToLead", fields: [assignedToId], references: [id])
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  divisionId String?
+  division   Division? @relation(fields: [divisionId], references: [id])
+
+  contractTypeId String?
+  contractType   ContractType? @relation(fields: [contractTypeId], references: [id])
+
+  tenderTypeId String?
+  tenderType   TenderType? @relation(fields: [tenderTypeId], references: [id])
+
+  marketSectorId String?
+  marketSector   MarketSector? @relation(fields: [marketSectorId], references: [id])
+
+  deliveryMethodId String?
+  deliveryMethod   DeliveryMethod? @relation(fields: [deliveryMethodId], references: [id])
+
+  // Relations
+  contacts     LeadContact[]
+  workScopes   LeadWorkScope[]
+  gngResponses GoNoGoResponse[]
+  activities   Activity[]
+  tasks        Task[]
+  comments     Comment[]
+  attachments  Attachment[]
+
+  @@index([accountId])
+  @@index([status])
+  @@index([assignedToId])
+}
+
+enum LeadStatus {
+  OPEN
+  CLOSED
+}
+
+model LeadContact {
+  leadId    String
+  lead      Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([leadId, contactId])
+}
+
+model LeadWorkScope {
+  leadId      String
+  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  workScopeId String
+  workScope   WorkScope @relation(fields: [workScopeId], references: [id], onDelete: Cascade)
+
+  @@id([leadId, workScopeId])
+}
+
+// ============================================================================
+// GO/NO-GO SURVEY
+// ============================================================================
+
+model GoNoGoQuestion {
+  id         String         @id @default(cuid())
+  question   String
+  type       GoNoGoType     @default(PROJECT)
+  isNA       Boolean        @default(false)
+  isCritical Boolean        @default(false)
+  sortOrder  Int            @default(0)
+  createdAt  DateTime       @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  responses GoNoGoResponse[]
+}
+
+enum GoNoGoType {
+  PROJECT
+  LEAD
+}
+
+model GoNoGoResponse {
+  id         String  @id @default(cuid())
+  score      Int?
+  isNA       Boolean @default(false)
+  isCritical Boolean @default(false)
+
+  questionId String
+  question   GoNoGoQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+// ============================================================================
+// PROJECTS
+// ============================================================================
+
+model Project {
+  id                  String        @id @default(cuid())
+  name                String
+  projectNumber       String?
+  contractValue       Decimal?      @db.Decimal(15, 2)
+  profit              Decimal?      @db.Decimal(15, 2)
+  feeAmount           Decimal?      @db.Decimal(15, 2)
+  feePercent          Float?
+  winProbability      Float?
+  address             String?
+  city                String?
+  state               String?
+  zipCode             String?
+  latitude            Float?
+  longitude           Float?
+  gsf                 Int?
+  units               Int?
+  projectDuration     Int?
+  preconStartDate     DateTime?
+  preconEndDate       DateTime?
+  bidDueDate          DateTime?
+  constructionStart   DateTime?
+  constructionEnd     DateTime?
+  awardDate           DateTime?
+  pursuitDuration     Int?
+  stageAge            Int?
+  gngScore            Float?
+  source              String?
+  projectFeatures     String?
+  contractFeatures    String?
+  constructionType    String?
+  competitorName      String?
+  competitorAmount    Decimal?      @db.Decimal(15, 2)
+  lossNotes           String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedToProject", fields: [assignedToId], references: [id])
+
+  divisionId String?
+  division   Division? @relation(fields: [divisionId], references: [id])
+
+  stageId String?
+  stage   Stage?  @relation(fields: [stageId], references: [id])
+
+  contractTypeId String?
+  contractType   ContractType? @relation(fields: [contractTypeId], references: [id])
+
+  tenderTypeId String?
+  tenderType   TenderType? @relation(fields: [tenderTypeId], references: [id])
+
+  marketSectorId String?
+  marketSector   MarketSector? @relation(fields: [marketSectorId], references: [id])
+
+  deliveryMethodId String?
+  deliveryMethod   DeliveryMethod? @relation(fields: [deliveryMethodId], references: [id])
+
+  lossReasonId String?
+  lossReason   LossReason? @relation(fields: [lossReasonId], references: [id])
+
+  // Relations
+  companies      ProjectCompany[]
+  contacts       ProjectContact[]
+  workScopes     ProjectWorkScope[]
+  documents      Document[]
+  budgetLines    BudgetLine[]
+  bidPackages    BidPackage[]
+  forecasts      ForecastEntry[]
+  timelineEvents TimelineEvent[]
+  workforce      WorkforceAssignment[]
+  gngResponses   GoNoGoResponse[]
+  activities     Activity[]
+  tasks          Task[]
+  comments       Comment[]
+  drawings       DrawingSheet[]
+  drawingSets    DrawingSet[]
+  costModelItems CostModelProject[]
+
+  @@index([accountId])
+  @@index([stageId])
+  @@index([divisionId])
+}
+
+model ProjectCompany {
+  id        String          @id @default(cuid())
+  role      CompanyCategory @default(OTHER)
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, companyId])
+}
+
+model ProjectContact {
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, contactId])
+}
+
+model ProjectWorkScope {
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workScopeId String
+  workScope   WorkScope @relation(fields: [workScopeId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, workScopeId])
+}
+
+// ============================================================================
+// DOCUMENTS & DRAWINGS
+// ============================================================================
+
+model Document {
+  id        String           @id @default(cuid())
+  name      String
+  type      String?
+  category  DocumentCategory @default(MISC)
+  location  String?
+  fileUrl   String?
+  fileSize  Int?
+  mimeType  String?
+  isTrashed Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdById String?
+
+  @@index([projectId])
+  @@index([category])
+}
+
+enum DocumentCategory {
+  ALL
+  RFP
+  DRAWINGS
+  SCHEDULES
+  PERMITS
+  CONTRACTS
+  MISC
+  PHOTOS
+  TRASH
+}
+
+model DrawingSet {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  sheets DrawingSheet[]
+}
+
+model DrawingSheet {
+  id         String  @id @default(cuid())
+  number     String
+  title      String
+  revision   String?
+  discipline String?
+  fileUrl    String?
+
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  drawingSetId String?
+  drawingSet   DrawingSet? @relation(fields: [drawingSetId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// ============================================================================
+// BUDGET & FINANCIALS
+// ============================================================================
+
+model CostCode {
+  id          String   @id @default(cuid())
+  code        String
+  description String
+  createdAt   DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  budgetLines BudgetLine[]
+
+  @@unique([accountId, code])
+}
+
+model CostType {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, name])
+}
+
+model BudgetLine {
+  id          String   @id @default(cuid())
+  description String
+  amount      Decimal  @db.Decimal(15, 2)
+  revision    Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  costCodeId String?
+  costCode   CostCode? @relation(fields: [costCodeId], references: [id])
+
+  @@index([projectId])
+}
+
+model ForecastEntry {
+  id               String   @id @default(cuid())
+  billingPeriod    DateTime
+  type             String   @default("Forecast")
+  percentComplete  Float?
+  newRevenue       Decimal? @db.Decimal(15, 2)
+  cumulativeRevenue Decimal? @db.Decimal(15, 2)
+  createdAt        DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// ============================================================================
+// BIDDING
+// ============================================================================
+
+model BidPackage {
+  id          String    @id @default(cuid())
+  number      Int
+  name        String
+  dueDate     DateTime?
+  awardedTo   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  bids           Bid[]
+  changeRequests ChangeRequest[]
+
+  @@index([projectId])
+}
+
+model Bid {
+  id        String   @id @default(cuid())
+  bidder    String
+  amount    Decimal  @db.Decimal(15, 2)
+  isAwarded Boolean  @default(false)
+  notes     String?
+  createdAt DateTime @default(now())
+
+  bidPackageId String
+  bidPackage   BidPackage @relation(fields: [bidPackageId], references: [id], onDelete: Cascade)
+}
+
+model ChangeRequest {
+  id          String   @id @default(cuid())
+  name        String
+  amount      Decimal  @db.Decimal(15, 2)
+  status      String   @default("Pending")
+  description String?
+  createdAt   DateTime @default(now())
+
+  bidPackageId String
+  bidPackage   BidPackage @relation(fields: [bidPackageId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// TIMELINE EVENTS
+// ============================================================================
+
+model TimelineEvent {
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime?
+  color     String   @default("#10B981")
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// TASKS
+// ============================================================================
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(OPEN)
+  dueDate     DateTime?
+  isDeleted   Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User   @relation("TaskCreator", fields: [createdById], references: [id])
+
+  assignedToId String?
+  assignedTo   User?   @relation("TaskAssignee", fields: [assignedToId], references: [id])
+
+  // Polymorphic link
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id])
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id])
+
+  @@index([accountId])
+  @@index([assignedToId])
+  @@index([status])
+}
+
+enum TaskStatus {
+  OPEN
+  COMPLETED
+}
+
+// ============================================================================
+// ACTIVITY & COMMENTS
+// ============================================================================
+
+model Activity {
+  id        String       @id @default(cuid())
+  type      ActivityType @default(NOTE)
+  content   String?
+  metadata  Json?
+  createdAt DateTime     @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Polymorphic link
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id])
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id])
+
+  @@index([accountId])
+  @@index([createdAt])
+}
+
+enum ActivityType {
+  NOTE
+  EMAIL
+  MEETING
+  CALL
+  TASK
+  SYSTEM
+  CUSTOM
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id])
+
+  attachments Attachment[]
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  name      String
+  fileUrl   String
+  fileSize  Int?
+  mimeType  String?
+  createdAt DateTime @default(now())
+
+  commentId String?
+  comment   Comment? @relation(fields: [commentId], references: [id])
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id])
+}
+
+// ============================================================================
+// WORKFORCE
+// ============================================================================
+
+model WorkforceRole {
+  id           String @id @default(cuid())
+  name         String
+  abbreviation String
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  employees   Employee[]
+  assignments WorkforceAssignment[]
+
+  @@unique([accountId, abbreviation])
+}
+
+model Employee {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  photoUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  divisionId String?
+  division   Division? @relation(fields: [divisionId], references: [id])
+
+  roleId String?
+  role   WorkforceRole? @relation(fields: [roleId], references: [id])
+
+  assignments    WorkforceAssignment[]
+  certifications EmployeeCertification[]
+
+  @@index([accountId])
+}
+
+model EmployeeCertification {
+  id             String    @id @default(cuid())
+  name           String
+  expirationDate DateTime?
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+
+model WorkforceAssignment {
+  id              String   @id @default(cuid())
+  startDate       DateTime
+  endDate         DateTime?
+  utilizationPct  Float    @default(100)
+  createdAt       DateTime @default(now())
+
+  projectId  String
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  roleId     String?
+  role       WorkforceRole? @relation(fields: [roleId], references: [id])
+
+  @@index([projectId])
+  @@index([employeeId])
+}
+
+// ============================================================================
+// REPORTS & VIEWS
+// ============================================================================
+
+model SavedView {
+  id         String         @id @default(cuid())
+  name       String
+  type       SavedViewType
+  visibility ViewVisibility @default(PERSONAL)
+  filters    Json?
+  columns    Json?
+  sortOrder  Json?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  ownerId String
+  owner   User   @relation("ViewOwner", fields: [ownerId], references: [id])
+
+  @@index([accountId])
+}
+
+enum SavedViewType {
+  CONTACTS
+  PROJECTS
+  LEADS
+  WORKFORCE
+  COMPANIES
+}
+
+enum ViewVisibility {
+  PERSONAL
+  SHARED
+}
+
+model Report {
+  id         String         @id @default(cuid())
+  name       String
+  type       ReportType
+  visibility ViewVisibility @default(PERSONAL)
+  config     Json?
+  folder     String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User   @relation("ReportCreator", fields: [createdById], references: [id])
+
+  @@index([accountId])
+}
+
+enum ReportType {
+  ACTIVITY
+  COMPANY
+  PROJECTS
+}
+
+// ============================================================================
+// COST MODELS
+// ============================================================================
+
+model CostModel {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects CostModelProject[]
+}
+
+model CostModelProject {
+  costModelId String
+  costModel   CostModel @relation(fields: [costModelId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([costModelId, projectId])
+}
+
+// ============================================================================
+// CUSTOM FIELDS
+// ============================================================================
+
+model CustomFieldGroup {
+  id        String          @id @default(cuid())
+  name      String
+  entity    CustomFieldEntity
+  sortOrder Int             @default(0)
+  createdAt DateTime        @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  fields CustomField[]
+}
+
+enum CustomFieldEntity {
+  COMPANY
+  CONTACT
+  LEAD
+  PROJECT
+  EMPLOYEE
+}
+
+model CustomField {
+  id        String          @id @default(cuid())
+  name      String
+  type      CustomFieldType
+  options   Json?
+  sortOrder Int             @default(0)
+  createdAt DateTime        @default(now())
+
+  groupId String
+  group   CustomFieldGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+enum CustomFieldType {
+  TEXT
+  LONG_TEXT
+  NUMBER
+  DATE
+  CHOICES_SINGLE
+  CHOICES_MULTI
+  BOOLEAN
+  URL
+}
+
+// ============================================================================
+// CUSTOM ACTIVITIES
+// ============================================================================
+
+model CustomActivityType {
+  id        String   @id @default(cuid())
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  fields CustomActivityField[]
+}
+
+model CustomActivityField {
+  id        String          @id @default(cuid())
+  name      String
+  type      CustomFieldType
+  options   Json?
+  sortOrder Int             @default(0)
+
+  activityTypeId String
+  activityType   CustomActivityType @relation(fields: [activityTypeId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// AI CHAT
+// ============================================================================
+
+model AiChat {
+  id        String   @id @default(cuid())
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  messages AiChatMessage[]
+}
+
+model AiChatMessage {
+  id        String   @id @default(cuid())
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+
+  chatId String
+  chat   AiChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+}
