@@ -20,7 +20,7 @@ const MENU_COLUMNS = [
       { label: "Home", href: "/home", icon: Home },
       { label: "Timeline", href: "/timeline", icon: Clock },
       { label: "Map", href: "/map", icon: Map },
-      { label: "AI Chat", href: "/ai-chat", icon: MessageSquare },
+      { label: "AI Workflows", href: "/ai-chat", icon: MessageSquare },
       { label: "Calendar", href: "/calendar", icon: Calendar },
       { label: "Settings", href: "/settings", icon: Settings },
     ],
