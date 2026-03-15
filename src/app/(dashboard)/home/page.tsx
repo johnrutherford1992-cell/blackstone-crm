@@ -2,6 +2,8 @@ import { getProjects } from "@/lib/dal";
 import { getAccountId } from "@/lib/auth-context";
 import { HomeClient } from "./home-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const accountId = await getAccountId();
   const result = await getProjects(accountId);

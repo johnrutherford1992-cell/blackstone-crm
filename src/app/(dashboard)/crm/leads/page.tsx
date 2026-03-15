@@ -2,6 +2,8 @@ import { getLeads, getCompanies, getDivisions } from "@/lib/dal";
 import { getAccountId } from "@/lib/auth-context";
 import { LeadsClient } from "./leads-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function LeadsPage() {
   const accountId = await getAccountId();
   const [result, companiesResult, divisions] = await Promise.all([

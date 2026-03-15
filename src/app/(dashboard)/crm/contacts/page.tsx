@@ -2,6 +2,8 @@ import { getContacts, getCompanies } from "@/lib/dal";
 import { getAccountId } from "@/lib/auth-context";
 import { ContactsClient } from "./contacts-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function ContactsPage() {
   const accountId = await getAccountId();
   const [result, companiesResult] = await Promise.all([
