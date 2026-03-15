@@ -9,6 +9,7 @@ export const createContactSchema = z.object({
   title: z.string().max(255).optional(),
   companyId: z.string().optional(),
   linkedIn: z.string().max(500).optional(),
+  contactRole: z.string().max(100).optional(),
 });
 
 export const updateContactSchema = createContactSchema.partial();

@@ -18,7 +18,11 @@ export const createLeadSchema = z.object({
   deliveryMethodId: z.string().optional(),
 });
 
-export const updateLeadSchema = createLeadSchema.partial();
+export const updateLeadSchema = createLeadSchema.partial().extend({
+  isSnoozed: z.boolean().optional(),
+  isArchived: z.boolean().optional(),
+  isPriority: z.boolean().optional(),
+});
 
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
 export type UpdateLeadInput = z.infer<typeof updateLeadSchema>;
