@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest } from "next/server";
 import { deleteFile } from "@/lib/storage";
 import { deleteDocument } from "@/lib/dal";

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest } from "next/server";
 import { getLeads, createLead } from "@/lib/dal";
 import { createLeadSchema } from "@/lib/validations/lead";

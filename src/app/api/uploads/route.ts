@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest } from "next/server";
 import { uploadFile, generateFilename } from "@/lib/storage";
 import { createDocument } from "@/lib/dal";

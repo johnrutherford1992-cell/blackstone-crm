@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest } from "next/server";
 import { getLeadById, updateLead, deleteLead } from "@/lib/dal";
 import { updateLeadSchema } from "@/lib/validations/lead";

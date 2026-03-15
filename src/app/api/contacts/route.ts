@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest } from "next/server";
 import { getContacts, createContact } from "@/lib/dal";
 import { createContactSchema } from "@/lib/validations/contact";

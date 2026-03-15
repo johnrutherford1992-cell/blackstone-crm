@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest } from "next/server";
 import { getCompanies, createCompany } from "@/lib/dal";
 import { createCompanySchema } from "@/lib/validations/company";
