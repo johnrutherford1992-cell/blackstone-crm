@@ -1,17 +1,21 @@
 // Blackstone CRM - Construction CRM & Project Management Platform
-// Full database schema for multi-tenant SaaS
+// Multi-schema setup: shared tables in "public", CRM-specific tables in "blackstone"
+// Shared with: field-ops, kinetic field ops (same Supabase database)
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["public", "blackstone"]
 }
 
 // ============================================================================
-// MULTI-TENANT ACCOUNT SYSTEM
+// SHARED TABLES (public schema) — used by field-ops, kinetic field ops, and Blackstone CRM
 // ============================================================================
 
 model Account {
@@ -52,11 +56,9 @@ model Account {
   costModels       CostModel[]
   employees        Employee[]
   aiChats          AiChat[]
-}
 
-// ============================================================================
-// USERS & AUTH
-// ============================================================================
+  @@schema("public")
+}
 
 model User {
   id             String    @id @default(cuid())
@@ -89,11 +91,14 @@ model User {
 
   @@index([accountId])
   @@index([email])
+  @@schema("public")
 }
 
 enum UserRole {
   ADMIN
   LIMITED
+
+  @@schema("public")
 }
 
 model Session {
@@ -101,6 +106,8 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+
+  @@schema("public")
 }
 
 model VerificationToken {
@@ -109,148 +116,8 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+  @@schema("public")
 }
-
-// ============================================================================
-// DIVISIONS & CONFIGURATION
-// ============================================================================
-
-model Division {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  projects  Project[]
-  leads     Lead[]
-  employees Employee[]
-
-  @@unique([accountId, name])
-}
-
-model Industry {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  companies CompanyIndustry[]
-
-  @@unique([accountId, name])
-}
-
-model Stage {
-  id         String      @id @default(cuid())
-  name       String
-  statusType StageStatus @default(OPEN)
-  sortOrder  Int         @default(0)
-  color      String      @default("#10B981")
-  createdAt  DateTime    @default(now())
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  projects Project[]
-
-  @@unique([accountId, name])
-}
-
-enum StageStatus {
-  OPEN
-  WON
-  LOST
-}
-
-model LossReason {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  projects Project[]
-
-  @@unique([accountId, name])
-}
-
-model ContractType {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  projects Project[]
-  leads    Lead[]
-
-  @@unique([accountId, name])
-}
-
-model TenderType {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  projects Project[]
-  leads    Lead[]
-
-  @@unique([accountId, name])
-}
-
-model MarketSector {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  projects Project[]
-  leads    Lead[]
-
-  @@unique([accountId, name])
-}
-
-model DeliveryMethod {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  projects Project[]
-  leads    Lead[]
-
-  @@unique([accountId, name])
-}
-
-model WorkScope {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  projects ProjectWorkScope[]
-  leads    LeadWorkScope[]
-
-  @@unique([accountId, name])
-}
-
-// ============================================================================
-// CRM - COMPANIES
-// ============================================================================
 
 model Company {
   id          String          @id @default(cuid())
@@ -285,6 +152,7 @@ model Company {
 
   @@index([accountId])
   @@index([category])
+  @@schema("public")
 }
 
 enum CompanyCategory {
@@ -294,6 +162,8 @@ enum CompanyCategory {
   FINANCE
   TRADE_PARTNER
   OTHER
+
+  @@schema("public")
 }
 
 model CompanyIndustry {
@@ -303,6 +173,7 @@ model CompanyIndustry {
   industry   Industry @relation(fields: [industryId], references: [id], onDelete: Cascade)
 
   @@id([companyId, industryId])
+  @@schema("public")
 }
 
 model CompanyRole {
@@ -311,11 +182,9 @@ model CompanyRole {
   companyId String
   company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
-}
 
-// ============================================================================
-// CRM - CONTACTS
-// ============================================================================
+  @@schema("public")
+}
 
 model Contact {
   id          String   @id @default(cuid())
@@ -349,142 +218,8 @@ model Contact {
 
   @@index([accountId])
   @@index([companyId])
+  @@schema("public")
 }
-
-// ============================================================================
-// CRM - LEADS
-// ============================================================================
-
-model Lead {
-  id              String     @id @default(cuid())
-  name            String
-  value           Decimal?   @db.Decimal(15, 2)
-  status          LeadStatus @default(OPEN)
-  estimatedStart  DateTime?
-  lastActivity    DateTime?
-  source          String?
-  address         String?
-  city            String?
-  state           String?
-  zipCode         String?
-  latitude        Float?
-  longitude       Float?
-  gsf             Int?
-  units           Int?
-  constructionDuration Int?
-  isPriority      Boolean    @default(false)
-  isSnoozed       Boolean    @default(false)
-  snoozedUntil    DateTime?
-  isArchived      Boolean    @default(false)
-  gngScore        Float?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  assignedToId String?
-  assignedTo   User?   @relation("AssignedToLead", fields: [assignedToId], references: [id])
-
-  companyId String?
-  company   Company? @relation(fields: [companyId], references: [id])
-
-  divisionId String?
-  division   Division? @relation(fields: [divisionId], references: [id])
-
-  contractTypeId String?
-  contractType   ContractType? @relation(fields: [contractTypeId], references: [id])
-
-  tenderTypeId String?
-  tenderType   TenderType? @relation(fields: [tenderTypeId], references: [id])
-
-  marketSectorId String?
-  marketSector   MarketSector? @relation(fields: [marketSectorId], references: [id])
-
-  deliveryMethodId String?
-  deliveryMethod   DeliveryMethod? @relation(fields: [deliveryMethodId], references: [id])
-
-  // Relations
-  contacts     LeadContact[]
-  workScopes   LeadWorkScope[]
-  gngResponses GoNoGoResponse[]
-  activities   Activity[]
-  tasks        Task[]
-  comments     Comment[]
-  attachments  Attachment[]
-
-  @@index([accountId])
-  @@index([status])
-  @@index([assignedToId])
-}
-
-enum LeadStatus {
-  OPEN
-  CLOSED
-}
-
-model LeadContact {
-  leadId    String
-  lead      Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  contactId String
-  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
-
-  @@id([leadId, contactId])
-}
-
-model LeadWorkScope {
-  leadId      String
-  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  workScopeId String
-  workScope   WorkScope @relation(fields: [workScopeId], references: [id], onDelete: Cascade)
-
-  @@id([leadId, workScopeId])
-}
-
-// ============================================================================
-// GO/NO-GO SURVEY
-// ============================================================================
-
-model GoNoGoQuestion {
-  id         String         @id @default(cuid())
-  question   String
-  type       GoNoGoType     @default(PROJECT)
-  isNA       Boolean        @default(false)
-  isCritical Boolean        @default(false)
-  sortOrder  Int            @default(0)
-  createdAt  DateTime       @default(now())
-
-  accountId String
-  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-
-  responses GoNoGoResponse[]
-}
-
-enum GoNoGoType {
-  PROJECT
-  LEAD
-}
-
-model GoNoGoResponse {
-  id         String  @id @default(cuid())
-  score      Int?
-  isNA       Boolean @default(false)
-  isCritical Boolean @default(false)
-
-  questionId String
-  question   GoNoGoQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
-
-  leadId    String?
-  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  projectId String?
-  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-}
-
-// ============================================================================
-// PROJECTS
-// ============================================================================
 
 model Project {
   id                  String        @id @default(cuid())
@@ -571,6 +306,7 @@ model Project {
   @@index([accountId])
   @@index([stageId])
   @@index([divisionId])
+  @@schema("public")
 }
 
 model ProjectCompany {
@@ -583,6 +319,7 @@ model ProjectCompany {
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, companyId])
+  @@schema("public")
 }
 
 model ProjectContact {
@@ -592,6 +329,7 @@ model ProjectContact {
   contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
   @@id([projectId, contactId])
+  @@schema("public")
 }
 
 model ProjectWorkScope {
@@ -601,11 +339,298 @@ model ProjectWorkScope {
   workScope   WorkScope @relation(fields: [workScopeId], references: [id], onDelete: Cascade)
 
   @@id([projectId, workScopeId])
+  @@schema("public")
 }
 
 // ============================================================================
-// DOCUMENTS & DRAWINGS
+// BLACKSTONE CRM-ONLY TABLES (blackstone schema)
 // ============================================================================
+
+// --- DIVISIONS & CONFIGURATION ---
+
+model Division {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects  Project[]
+  leads     Lead[]
+  employees Employee[]
+
+  @@unique([accountId, name])
+  @@schema("blackstone")
+}
+
+model Industry {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  companies CompanyIndustry[]
+
+  @@unique([accountId, name])
+  @@schema("blackstone")
+}
+
+model Stage {
+  id         String      @id @default(cuid())
+  name       String
+  statusType StageStatus @default(OPEN)
+  sortOrder  Int         @default(0)
+  color      String      @default("#10B981")
+  createdAt  DateTime    @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects Project[]
+
+  @@unique([accountId, name])
+  @@schema("blackstone")
+}
+
+enum StageStatus {
+  OPEN
+  WON
+  LOST
+
+  @@schema("blackstone")
+}
+
+model LossReason {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects Project[]
+
+  @@unique([accountId, name])
+  @@schema("blackstone")
+}
+
+model ContractType {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects Project[]
+  leads    Lead[]
+
+  @@unique([accountId, name])
+  @@schema("blackstone")
+}
+
+model TenderType {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects Project[]
+  leads    Lead[]
+
+  @@unique([accountId, name])
+  @@schema("blackstone")
+}
+
+model MarketSector {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects Project[]
+  leads    Lead[]
+
+  @@unique([accountId, name])
+  @@schema("blackstone")
+}
+
+model DeliveryMethod {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects Project[]
+  leads    Lead[]
+
+  @@unique([accountId, name])
+  @@schema("blackstone")
+}
+
+model WorkScope {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  projects ProjectWorkScope[]
+  leads    LeadWorkScope[]
+
+  @@unique([accountId, name])
+  @@schema("blackstone")
+}
+
+// --- CRM - LEADS ---
+
+model Lead {
+  id              String     @id @default(cuid())
+  name            String
+  value           Decimal?   @db.Decimal(15, 2)
+  status          LeadStatus @default(OPEN)
+  estimatedStart  DateTime?
+  lastActivity    DateTime?
+  source          String?
+  address         String?
+  city            String?
+  state           String?
+  zipCode         String?
+  latitude        Float?
+  longitude       Float?
+  gsf             Int?
+  units           Int?
+  constructionDuration Int?
+  isPriority      Boolean    @default(false)
+  isSnoozed       Boolean    @default(false)
+  snoozedUntil    DateTime?
+  isArchived      Boolean    @default(false)
+  gngScore        Float?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedToLead", fields: [assignedToId], references: [id])
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  divisionId String?
+  division   Division? @relation(fields: [divisionId], references: [id])
+
+  contractTypeId String?
+  contractType   ContractType? @relation(fields: [contractTypeId], references: [id])
+
+  tenderTypeId String?
+  tenderType   TenderType? @relation(fields: [tenderTypeId], references: [id])
+
+  marketSectorId String?
+  marketSector   MarketSector? @relation(fields: [marketSectorId], references: [id])
+
+  deliveryMethodId String?
+  deliveryMethod   DeliveryMethod? @relation(fields: [deliveryMethodId], references: [id])
+
+  // Relations
+  contacts     LeadContact[]
+  workScopes   LeadWorkScope[]
+  gngResponses GoNoGoResponse[]
+  activities   Activity[]
+  tasks        Task[]
+  comments     Comment[]
+  attachments  Attachment[]
+
+  @@index([accountId])
+  @@index([status])
+  @@index([assignedToId])
+  @@schema("blackstone")
+}
+
+enum LeadStatus {
+  OPEN
+  CLOSED
+
+  @@schema("blackstone")
+}
+
+model LeadContact {
+  leadId    String
+  lead      Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([leadId, contactId])
+  @@schema("blackstone")
+}
+
+model LeadWorkScope {
+  leadId      String
+  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  workScopeId String
+  workScope   WorkScope @relation(fields: [workScopeId], references: [id], onDelete: Cascade)
+
+  @@id([leadId, workScopeId])
+  @@schema("blackstone")
+}
+
+// --- GO/NO-GO SURVEY ---
+
+model GoNoGoQuestion {
+  id         String         @id @default(cuid())
+  question   String
+  type       GoNoGoType     @default(PROJECT)
+  isNA       Boolean        @default(false)
+  isCritical Boolean        @default(false)
+  sortOrder  Int            @default(0)
+  createdAt  DateTime       @default(now())
+
+  accountId String
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  responses GoNoGoResponse[]
+
+  @@schema("blackstone")
+}
+
+enum GoNoGoType {
+  PROJECT
+  LEAD
+
+  @@schema("blackstone")
+}
+
+model GoNoGoResponse {
+  id         String  @id @default(cuid())
+  score      Int?
+  isNA       Boolean @default(false)
+  isCritical Boolean @default(false)
+
+  questionId String
+  question   GoNoGoQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  leadId    String?
+  lead      Lead?    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@schema("blackstone")
+}
+
+// --- DOCUMENTS & DRAWINGS ---
 
 model Document {
   id        String           @id @default(cuid())
@@ -627,6 +652,7 @@ model Document {
 
   @@index([projectId])
   @@index([category])
+  @@schema("blackstone")
 }
 
 enum DocumentCategory {
@@ -639,6 +665,8 @@ enum DocumentCategory {
   MISC
   PHOTOS
   TRASH
+
+  @@schema("blackstone")
 }
 
 model DrawingSet {
@@ -650,6 +678,8 @@ model DrawingSet {
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   sheets DrawingSheet[]
+
+  @@schema("blackstone")
 }
 
 model DrawingSheet {
@@ -668,11 +698,10 @@ model DrawingSheet {
   createdAt DateTime @default(now())
 
   @@index([projectId])
+  @@schema("blackstone")
 }
 
-// ============================================================================
-// BUDGET & FINANCIALS
-// ============================================================================
+// --- BUDGET & FINANCIALS ---
 
 model CostCode {
   id          String   @id @default(cuid())
@@ -686,6 +715,7 @@ model CostCode {
   budgetLines BudgetLine[]
 
   @@unique([accountId, code])
+  @@schema("blackstone")
 }
 
 model CostType {
@@ -697,6 +727,7 @@ model CostType {
   account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@unique([accountId, name])
+  @@schema("blackstone")
 }
 
 model BudgetLine {
@@ -713,6 +744,7 @@ model BudgetLine {
   costCode   CostCode? @relation(fields: [costCodeId], references: [id])
 
   @@index([projectId])
+  @@schema("blackstone")
 }
 
 model ForecastEntry {
@@ -728,11 +760,10 @@ model ForecastEntry {
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+  @@schema("blackstone")
 }
 
-// ============================================================================
-// BIDDING
-// ============================================================================
+// --- BIDDING ---
 
 model BidPackage {
   id          String    @id @default(cuid())
@@ -750,6 +781,7 @@ model BidPackage {
   changeRequests ChangeRequest[]
 
   @@index([projectId])
+  @@schema("blackstone")
 }
 
 model Bid {
@@ -762,6 +794,8 @@ model Bid {
 
   bidPackageId String
   bidPackage   BidPackage @relation(fields: [bidPackageId], references: [id], onDelete: Cascade)
+
+  @@schema("blackstone")
 }
 
 model ChangeRequest {
@@ -774,11 +808,11 @@ model ChangeRequest {
 
   bidPackageId String
   bidPackage   BidPackage @relation(fields: [bidPackageId], references: [id], onDelete: Cascade)
+
+  @@schema("blackstone")
 }
 
-// ============================================================================
-// TIMELINE EVENTS
-// ============================================================================
+// --- TIMELINE EVENTS ---
 
 model TimelineEvent {
   id        String   @id @default(cuid())
@@ -790,11 +824,11 @@ model TimelineEvent {
 
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@schema("blackstone")
 }
 
-// ============================================================================
-// TASKS
-// ============================================================================
+// --- TASKS ---
 
 model Task {
   id          String     @id @default(cuid())
@@ -828,16 +862,17 @@ model Task {
   @@index([accountId])
   @@index([assignedToId])
   @@index([status])
+  @@schema("blackstone")
 }
 
 enum TaskStatus {
   OPEN
   COMPLETED
+
+  @@schema("blackstone")
 }
 
-// ============================================================================
-// ACTIVITY & COMMENTS
-// ============================================================================
+// --- ACTIVITY & COMMENTS ---
 
 model Activity {
   id        String       @id @default(cuid())
@@ -864,6 +899,7 @@ model Activity {
 
   @@index([accountId])
   @@index([createdAt])
+  @@schema("blackstone")
 }
 
 enum ActivityType {
@@ -874,6 +910,8 @@ enum ActivityType {
   TASK
   SYSTEM
   CUSTOM
+
+  @@schema("blackstone")
 }
 
 model Comment {
@@ -891,6 +929,8 @@ model Comment {
   lead      Lead?    @relation(fields: [leadId], references: [id])
 
   attachments Attachment[]
+
+  @@schema("blackstone")
 }
 
 model Attachment {
@@ -905,11 +945,11 @@ model Attachment {
   comment   Comment? @relation(fields: [commentId], references: [id])
   leadId    String?
   lead      Lead?    @relation(fields: [leadId], references: [id])
+
+  @@schema("blackstone")
 }
 
-// ============================================================================
-// WORKFORCE
-// ============================================================================
+// --- WORKFORCE ---
 
 model WorkforceRole {
   id           String @id @default(cuid())
@@ -923,6 +963,7 @@ model WorkforceRole {
   assignments WorkforceAssignment[]
 
   @@unique([accountId, abbreviation])
+  @@schema("blackstone")
 }
 
 model Employee {
@@ -948,6 +989,7 @@ model Employee {
   certifications EmployeeCertification[]
 
   @@index([accountId])
+  @@schema("blackstone")
 }
 
 model EmployeeCertification {
@@ -957,6 +999,8 @@ model EmployeeCertification {
 
   employeeId String
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@schema("blackstone")
 }
 
 model WorkforceAssignment {
@@ -975,11 +1019,10 @@ model WorkforceAssignment {
 
   @@index([projectId])
   @@index([employeeId])
+  @@schema("blackstone")
 }
 
-// ============================================================================
-// REPORTS & VIEWS
-// ============================================================================
+// --- REPORTS & VIEWS ---
 
 model SavedView {
   id         String         @id @default(cuid())
@@ -999,6 +1042,7 @@ model SavedView {
   owner   User   @relation("ViewOwner", fields: [ownerId], references: [id])
 
   @@index([accountId])
+  @@schema("blackstone")
 }
 
 enum SavedViewType {
@@ -1007,11 +1051,15 @@ enum SavedViewType {
   LEADS
   WORKFORCE
   COMPANIES
+
+  @@schema("blackstone")
 }
 
 enum ViewVisibility {
   PERSONAL
   SHARED
+
+  @@schema("blackstone")
 }
 
 model Report {
@@ -1031,17 +1079,18 @@ model Report {
   createdBy   User   @relation("ReportCreator", fields: [createdById], references: [id])
 
   @@index([accountId])
+  @@schema("blackstone")
 }
 
 enum ReportType {
   ACTIVITY
   COMPANY
   PROJECTS
+
+  @@schema("blackstone")
 }
 
-// ============================================================================
-// COST MODELS
-// ============================================================================
+// --- COST MODELS ---
 
 model CostModel {
   id        String   @id @default(cuid())
@@ -1053,6 +1102,8 @@ model CostModel {
   account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   projects CostModelProject[]
+
+  @@schema("blackstone")
 }
 
 model CostModelProject {
@@ -1062,11 +1113,10 @@ model CostModelProject {
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@id([costModelId, projectId])
+  @@schema("blackstone")
 }
 
-// ============================================================================
-// CUSTOM FIELDS
-// ============================================================================
+// --- CUSTOM FIELDS ---
 
 model CustomFieldGroup {
   id        String          @id @default(cuid())
@@ -1079,6 +1129,8 @@ model CustomFieldGroup {
   account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   fields CustomField[]
+
+  @@schema("blackstone")
 }
 
 enum CustomFieldEntity {
@@ -1087,6 +1139,8 @@ enum CustomFieldEntity {
   LEAD
   PROJECT
   EMPLOYEE
+
+  @@schema("blackstone")
 }
 
 model CustomField {
@@ -1099,6 +1153,8 @@ model CustomField {
 
   groupId String
   group   CustomFieldGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@schema("blackstone")
 }
 
 enum CustomFieldType {
@@ -1110,11 +1166,11 @@ enum CustomFieldType {
   CHOICES_MULTI
   BOOLEAN
   URL
+
+  @@schema("blackstone")
 }
 
-// ============================================================================
-// CUSTOM ACTIVITIES
-// ============================================================================
+// --- CUSTOM ACTIVITIES ---
 
 model CustomActivityType {
   id        String   @id @default(cuid())
@@ -1126,6 +1182,8 @@ model CustomActivityType {
   account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   fields CustomActivityField[]
+
+  @@schema("blackstone")
 }
 
 model CustomActivityField {
@@ -1137,11 +1195,11 @@ model CustomActivityField {
 
   activityTypeId String
   activityType   CustomActivityType @relation(fields: [activityTypeId], references: [id], onDelete: Cascade)
+
+  @@schema("blackstone")
 }
 
-// ============================================================================
-// AI CHAT
-// ============================================================================
+// --- AI CHAT ---
 
 model AiChat {
   id        String   @id @default(cuid())
@@ -1156,6 +1214,8 @@ model AiChat {
   user   User   @relation(fields: [userId], references: [id])
 
   messages AiChatMessage[]
+
+  @@schema("blackstone")
 }
 
 model AiChatMessage {
@@ -1166,4 +1226,6 @@ model AiChatMessage {
 
   chatId String
   chat   AiChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@schema("blackstone")
 }
